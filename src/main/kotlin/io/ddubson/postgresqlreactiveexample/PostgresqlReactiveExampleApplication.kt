@@ -1,16 +1,19 @@
 package io.ddubson.postgresqlreactiveexample
 
 import io.r2dbc.client.R2dbc
+import io.r2dbc.postgresql.PostgresqlConnectionConfiguration
+import io.r2dbc.postgresql.PostgresqlConnectionFactory
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
-import org.springframework.web.reactive.function.server.*
+import org.springframework.web.reactive.function.server.RouterFunction
+import org.springframework.web.reactive.function.server.ServerResponse
+import org.springframework.web.reactive.function.server.body
+import org.springframework.web.reactive.function.server.router
 import reactor.core.publisher.Flux
-import io.r2dbc.postgresql.PostgresqlConnectionConfiguration
-import io.r2dbc.postgresql.PostgresqlConnectionFactory
 
 
 @SpringBootApplication
@@ -28,13 +31,14 @@ class Config {
     }
 
     @Bean
-    fun postgreReactiveClient(configuration: PostgresqlConnectionConfiguration): R2dbc = R2dbc(PostgresqlConnectionFactory(configuration))
+    fun postgreReactiveClient(configuration: PostgresqlConnectionConfiguration): R2dbc =
+            R2dbc(PostgresqlConnectionFactory(configuration))
 
     @Bean
     fun postgreConfig() = PostgresqlConnectionConfiguration.builder()
             .host("localhost")
             .port(5432)
-            .database("postgres")
+            .database("ddubson")
             .username("ddubson")
             .password("")
             .build()
@@ -42,20 +46,20 @@ class Config {
 
 @Component
 class DataHandler(private val postgreReactiveClient: R2dbc) {
-    fun getSomeData(): Flux<Int> {
+    fun getSomeData(): Flux<String> {
         return postgreReactiveClient
+                /*.inTransaction { handle ->
+                    handle.execute("INSERT INTO nyc_311_complaints (test) VALUES ($1)", 100)
+                }*/
                 .inTransaction { handle ->
-                    handle.execute("INSERT INTO testtable (test) VALUES ($1)", 100)
-                }
-                .thenMany(postgreReactiveClient.inTransaction { handle ->
                     handle
-                            .select("SELECT test FROM testtable")
+                            .select("SELECT service_request_id FROM nyc_311_complaints")
                             .mapResult { result ->
                                 result.map { row, rowMetadata ->
-                                    row.get("test", Int::class.java) ?: 1
+                                    row.get("service_request_id", String::class.java) ?: "Not found"
                                 }
                             }
-                })
+                }
     }
 }
 
