@@ -38,7 +38,7 @@ class Config {
     fun postgreConfig() = PostgresqlConnectionConfiguration.builder()
             .host("localhost")
             .port(5432)
-            .database("ddubson")
+            .database("postgres")
             .username("ddubson")
             .password("")
             .build()
@@ -46,17 +46,17 @@ class Config {
 
 @Component
 class DataHandler(private val postgreReactiveClient: R2dbc) {
-    fun getSomeData(): Flux<String> {
+    fun getSomeData(): Flux<Integer> {
         return postgreReactiveClient
                 /*.inTransaction { handle ->
                     handle.execute("INSERT INTO nyc_311_complaints (test) VALUES ($1)", 100)
                 }*/
                 .inTransaction { handle ->
                     handle
-                            .select("SELECT service_request_id FROM nyc_311_complaints")
+                            .select("SELECT column1 FROM test_schema.testc")
                             .mapResult { result ->
-                                result.map { row, rowMetadata ->
-                                    row.get("service_request_id", String::class.java) ?: "Not found"
+                                result.map<Integer> { row, rowMetadata ->
+                                    row.get("column1", Integer::class.java)
                                 }
                             }
                 }
